@@ -1,4 +1,4 @@
-from src import *
+from src import Board
 
 board = Board()
 

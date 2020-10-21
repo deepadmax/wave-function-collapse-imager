@@ -12,6 +12,8 @@ class Pattern:
             self.lib[char] = [neighbours]
 
     def match(self, neighbours: list):
+        print(neighbours)
+
         possible_states = list(self.lib.keys())
         states = []
 
