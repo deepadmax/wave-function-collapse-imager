@@ -1,8 +1,12 @@
-from patterns import load_patterns
-tiles = load_patterns('demo.pat')
+from src import *
 
-from field import Field
-field = Field(tiles)
+board = Board()
 
-field.collapse()
-print(field)
+board.load_from_file('demo.pat')
+board.load_patterns()
+board.clear()
+
+board.seed()
+
+board.generate()
+print(board)
