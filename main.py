@@ -1,12 +1,12 @@
-from src import Board
+from src import Field
 
-board = Board()
+field = Field()
 
-board.load_from_file('demo.pat')
-board.load_patterns()
-board.clear()
+field.load_from_file('demo.pat')
+field.load_patterns()
+field.clear()
 
-board.seed()
+field.seed()
 
-board.generate()
+field.generate()
 # print(board)

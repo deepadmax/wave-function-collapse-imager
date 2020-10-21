@@ -1,3 +1,3 @@
 from random import randint, choice
 
-from .board import Board
+from .field import Field

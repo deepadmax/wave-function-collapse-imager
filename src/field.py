@@ -5,7 +5,7 @@ from .tiles import Tile
 from .patterns import Pattern
 
 
-class Board:
+class Field:
     def __init__(self, width: int = 0, height: int = 0):
         self.width, self.height = width, height
         self.possible_states = []
@@ -14,10 +14,16 @@ class Board:
         self.N = 1
 
     def __str__(self):
-        return "\n".join(["".join([*map(str, row)]) for row in self.grid])
+        return '\n'.join([''.join([*map(str, row)]) for row in self.grid])
 
     def is_completed(self):
-        return all([all([*map(lambda a: a.has_collapsed, row)]) for row in self.grid])
+        """Check if all tiles have had their state collapsed"""
+        
+        for row in self.grid:
+            for tile in row:
+                if not tile.has_collapsed:
+                    return False
+        return True
 
     def load_patterns(self):
         for i in range(self.height):
@@ -33,7 +39,8 @@ class Board:
         self.grid[randint(0,self.height-1)][randint(0,self.width-1)].states = [choice(self.possible_states)]
 
     def load_from_file(self, file_name: str):
-        """loads a board from a file ('file_name') and extracts all possible states"""
+        """Loads a board from a file ('file_name') and extracts all possible states"""
+
         with open(file_name, 'r') as file:
             self.grid = [list(row) for row in file.read().split('\n')]
 
@@ -66,8 +73,8 @@ class Board:
         return states
 
     def get_lowest_entropy(self):
-        # Generate grid of entropy for each tile
-        entropy_grid = np.array([
+        # Generate a grid of the entropy of each tile
+        entropies = np.array([
             [
                 entr if (entr := self.grid[i][j].get_entropy()) != 1
                 else len(self.possible_states) + 1
@@ -77,14 +84,14 @@ class Board:
         ])
 
         # Find the lowest entropy
-        min_entropy = np.min(entropy_grid)
+        min_entropy = np.min(entropies)
 
         # All the indices which contain the minimum entropy
-        coords = [(int(i), int(j)) for i, j in  zip(*np.where(entropy_grid == min_entropy))]
+        indices = [(int(i), int(j)) for i, j in  zip(*np.where(entropies == min_entropy))]
         
         # Pick a random element
-        n = np.random.randint(len(coords))
-        i, j = coords[n]
+        n = np.random.randint(len(indices))
+        i, j = indices[n]
 
         return i, j
 
