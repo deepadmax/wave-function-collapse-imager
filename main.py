@@ -9,4 +9,4 @@ board.clear()
 board.seed()
 
 board.generate()
-print(board)
+# print(board)

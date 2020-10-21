@@ -17,3 +17,6 @@ class Tile:
 
     def collapse(self):
         self.states = [choice(self.states)]
+
+    def update_states(self, states: list):
+      self.states = states
