@@ -98,12 +98,15 @@ class Field:
         # Generate a grid of the entropy for each tile
         entropies = np.array([
             [
-                entr if (entr := self.canvas[i][j].entropy) != 1
-                else len(self.possible_states) + 1
+                entr if (entr := self.canvas[i][j].entropy) != 1 else -1
                 for j in range(self.width)
             ]
             for i in range(self.height)
         ])
+
+        # Find the highest entropy
+        max_entropy = np.max(entropies)
+        entropies[entropies == -1] = max_entropy
 
         # Find the lowest entropy
         min_entropy = np.min(entropies)
@@ -169,6 +172,8 @@ class Field:
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
+
+                        print(self, '\n')
 
                         if tuple(current_states) != new_states:
                             self.canvas[i][j].states = new_states
