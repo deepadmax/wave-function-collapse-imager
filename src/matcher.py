@@ -21,22 +21,22 @@ class Matcher:
         # Number of neighbors
         n = len(neighbors)
         
+        # Center of kernel
+        center = (n // 2, n // 2)
+        
         for state in self.patterns.keys():
             count = 0
-            state_possible = True
             for patt in self.patterns[state]:
                 for i in range(n):
                     for j in range(n):
-                        if patt[i][j] in neighbors[i][j].states:
-                            count += 1
-                        else:
-                            state_possible = False   
-                if not state_possible:
-                    count = 0
-                    break
+                        if (i, j) == center:
+                            continue
+                        if patt[i][j] not in neighbors[i][j].states:
+                            break
+                else:
+                    count += 1
 
-            if count:
-                states += [state]*count
+            states += [state]*count
             
         return states
     
