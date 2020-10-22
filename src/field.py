@@ -47,7 +47,6 @@ class Field:
                     neighbors = tuple(
                         tuple(
                             canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            if u != 0 or v != 0 else None
                             for v in radial_range
                         )
                         for u in radial_range
@@ -59,7 +58,8 @@ class Field:
                     # Add pattern
                     matcher.add_pattern(neighbors, state)
 
-            # print(matcher.patterns)
+            for k,p in matcher.patterns.items():
+                print(p)
 
             return cls(possible_states, matcher, radius, width, height)
 
@@ -131,7 +131,6 @@ class Field:
             )
             for u in radial_range
             for v in radial_range
-            if u != 0 or v != 0
         ]
 
         return neighbors
@@ -150,7 +149,7 @@ class Field:
 
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
-            max_depth = 10
+            max_depth = 100000
             while len(affected) > 0 and max_depth > 0:
                 max_depth -= 1
                 new_affected = []
@@ -177,10 +176,11 @@ class Field:
 
                         if tuple(current_states) != tuple(new_states):
                             self.canvas[i][j].states = new_states
+                            # print(new_states)
                             
                             new_affected += [
                                 pos for pos in set(neighbors).difference(set(affected))
-                                if pos not in new_affected and pos not in affected
+                                if pos not in new_affected
                             ]
 
                 # print(len(affected))
@@ -188,4 +188,4 @@ class Field:
                 if new_affected:
                     affected = new_affected[:]
             
-            print(self)
+            print(self, '\n')

@@ -19,24 +19,25 @@ class Matcher:
         states = []
 
         # Number of neighbors
-        n = len(neighbors)
+        N = len(neighbors)
+        n = N//2
         
         for state in self.patterns.keys():
             count = 0
-            state_possible = True
             for patt in self.patterns[state]:
-                for i in range(n):
-                    for j in range(n):
-                        if patt[i][j] in neighbors[i][j].states:
-                            count += 1
-                        else:
-                            state_possible = False   
-                if not state_possible:
-                    count = 0
-                    break
+                possible = True
+                for i in range(N):
+                    for j in range(N):
+                        if i == n and j == n:
+                            continue
 
-            if count:
-                states += [state]*count
+                        if patt[i][j] not in neighbors[i][j].states:
+                            possible = False   
+
+                if possible:
+                    count += 1
+
+            states += [state]*count
             
         return states
     
