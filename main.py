@@ -1,10 +1,10 @@
 from src import Field
 
 field = Field.create(
-    'demo.pat',
-    width=64,
+    'demo-2.pat',
+    width=32,
     height=16,
-    radius=1
+    radius=2
 )
 
 field.clear()

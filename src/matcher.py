@@ -1,3 +1,4 @@
+import numpy as np
 
 
 class Matcher:
@@ -27,12 +28,11 @@ class Matcher:
         for state in self.patterns.keys():
             count = 0
             for patt in self.patterns[state]:
-                for i in range(n):
-                    for j in range(n):
-                        if (i, j) == center:
-                            continue
-                        if patt[i][j] not in neighbors[i][j].states:
-                            break
+                for i, j in np.ndindex((n, n)):
+                    if (i, j) == center:
+                        continue
+                    if patt[i][j] not in neighbors[i][j].states:
+                        break
                 else:
                     count += 1
 
