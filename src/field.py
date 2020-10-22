@@ -46,11 +46,15 @@ class Field:
                     neighbors = tuple(
                         tuple(
                             canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            if u != 0 and v != 0 else ''
+                            if u != 0 and v != 0 else None
                             for v in radial_range
                         )
                         for u in radial_range
                     )
+
+                    # for row in neighbors:
+                    #     print(' '.join(row))
+                    # print()
 
                     # Get state from center
                     state = canvas[i][j]
