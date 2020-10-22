@@ -46,15 +46,14 @@ class Field:
                     neighbors = tuple(
                         tuple(
                             canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            if u != 0 and v != 0 else None
+                            if (u, v) != (0, 0) else None
                             for v in radial_range
                         )
                         for u in radial_range
                     )
 
-                    # for row in neighbors:
-                    #     print(' '.join(row))
-                    # print()
+                    # print('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in neighbors))
+                    print()
 
                     # Get state from center
                     state = canvas[i][j]
@@ -98,7 +97,7 @@ class Field:
         # Generate a grid of the entropy for each tile
         entropies = np.array([
             [
-                entr if (entr := self.canvas[i][j].entropy) != 1 else -1
+                entr if (entr := self.canvas[i][j].entropy) != 1 else None
                 for j in range(self.width)
             ]
             for i in range(self.height)
@@ -106,7 +105,7 @@ class Field:
 
         # Find the highest entropy
         max_entropy = np.max(entropies)
-        entropies[entropies == -1] = max_entropy
+        entropies[entropies == None] = max_entropy
 
         # Find the lowest entropy
         min_entropy = np.min(entropies)
@@ -173,6 +172,7 @@ class Field:
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
 
+                        print('-'*64)
                         print(self, '\n')
 
                         if tuple(current_states) != new_states:
