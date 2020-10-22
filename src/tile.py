@@ -1,3 +1,4 @@
+import numpy as np
 from random import choice
 
 
@@ -15,7 +16,13 @@ class Tile:
 
     @property
     def entropy(self):
-        return len(self.states)
+        entropy = 0
+        for state in set(self.states):
+            p = self.states.count(state) / len(self.states)
+            z = p * np.log(p)
+            entropy -= z
+
+        return entropy
 
     def collapse(self):
         self.states = [choice(self.states)]
