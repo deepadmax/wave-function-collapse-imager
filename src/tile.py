@@ -3,8 +3,7 @@ from random import choice
 
 
 class Tile:
-    def __init__(self, pos, states):
-        self.pos = pos
+    def __init__(self, states):
         self.states = states
 
     def __str__(self):
