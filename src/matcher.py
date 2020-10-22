@@ -1,3 +1,4 @@
+import numpy as np
 
 
 class Matcher:
@@ -19,22 +20,20 @@ class Matcher:
         states = []
 
         # Number of neighbors
-        N = len(neighbors)
-        n = N//2
+        n = len(neighbors)
+        
+        # Center of kernel
+        center = (n // 2, n // 2)
         
         for state in self.patterns.keys():
             count = 0
             for patt in self.patterns[state]:
-                possible = True
-                for i in range(N):
-                    for j in range(N):
-                        if i == n and j == n:
-                            continue
-
-                        if patt[i][j] not in neighbors[i][j].states:
-                            possible = False   
-
-                if possible:
+                for i, j in np.ndindex((n, n)):
+                    if (i, j) == center:
+                        continue
+                    if patt[i][j] not in neighbors[i][j].states:
+                        break
+                else:
                     count += 1
 
             states += [state]*count
@@ -77,7 +76,6 @@ class Matcher:
             for j in range(n)
         ]
 
-        latest_comb = None
         for states_combination in combinations(all_neighbor_states):
             states_combination = [
                 [
@@ -90,15 +88,18 @@ class Matcher:
             states_combination[half_way][half_way] = None
             states_combination = self.tuple_neighbors(states_combination)
 
-            if states_combination[0][:2] != latest_comb:
-                print(latest_comb)
-                latest_comb = states_combination[0][:2]
+            # print('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in states_combination), '\n')
 
             if states := self.patterns.get(states_combination):
                 return tuple(states)
 
-        all_patterns = '\n  '.join(map(str, self.patterns.keys()))
-        raise RuntimeError(f"{all_neighbor_states}\ndoesn't match with anything in\n  [\n{all_patterns}\n]")
+        neighbor_states_s = '\n'.join(map(str, all_neighbor_states))
+
+        patterns_s = '\n\n'.join(map(
+            lambda p: ('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in p)),
+            self.patterns.keys()
+        ))
+        raise RuntimeError(f"{neighbor_states_s}\ndoesn't match with anything in\n  [\n{patterns_s}\n]")
             
 
     @staticmethod

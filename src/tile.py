@@ -7,7 +7,7 @@ class Tile:
         self.states = states
 
     def __str__(self):
-        return self.states[0] if self.has_collapsed else '░'
+        return self.states[0] if self.has_collapsed else 'პ'
 
     @property
     def has_collapsed(self):

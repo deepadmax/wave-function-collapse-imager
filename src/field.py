@@ -105,7 +105,7 @@ class Field:
 
         # Find the highest entropy
         max_entropy = np.max(entropies)
-        entropies[entropies == -1] = max_entropy+1
+        entropies[entropies == -1] = max_entropy + 1
 
         # Find the lowest entropy
         min_entropy = np.min(entropies)
@@ -172,7 +172,6 @@ class Field:
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
-
 
                         if tuple(current_states) != tuple(new_states):
                             self.canvas[i][j].states = new_states
