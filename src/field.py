@@ -132,7 +132,7 @@ class Field:
             )
             for u in radial_range
             for v in radial_range
-            if u != 0 and v != 0
+            if u != 0 or v != 0
         ]
 
         return neighbors
