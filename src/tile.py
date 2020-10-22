@@ -3,16 +3,15 @@ from random import choice
 
 
 class Tile:
-    def __init__(self, pos, states):
-        self.pos = pos
+    def __init__(self, states):
         self.states = states
 
     def __str__(self):
-        return self.states[0] if self.has_collapsed else '§'
+        return self.states[0] if self.has_collapsed else '░'
 
     @property
     def has_collapsed(self):
-        return self.entropy == 1
+        return len(self.states) == 1
 
     @property
     def entropy(self):

@@ -21,6 +21,7 @@ class Field:
         """Create a canvas from file"""
 
         with open(fname) as f:
+
             # A 2D array of characters
             canvas = [list(row) for row in f.read().split('\n')]
 
@@ -40,26 +41,25 @@ class Field:
             # Scan through the canvas and create patterns from each section
             radial_range = range(-radius, radius+1)
 
-            for i in range(height):
-                for j in range(width):
+            for i in range(canvas_height):
+                for j in range(canvas_width):
                     # An array of neighbors except the center is None
                     neighbors = tuple(
                         tuple(
                             canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            if (u, v) != (0, 0) else None
+                            # if (u, v) != (0, 0) else None
                             for v in radial_range
                         )
                         for u in radial_range
                     )
-
-                    # print('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in neighbors))
-                    print()
 
                     # Get state from center
                     state = canvas[i][j]
 
                     # Add pattern
                     matcher.add_pattern(neighbors, state)
+
+            # print(matcher.patterns)
 
             return cls(possible_states, matcher, radius, width, height)
 
@@ -80,7 +80,7 @@ class Field:
         """Clear the canvas and set all tiles into superposition"""
         
         self.canvas = [
-            [Tile((i, j), self.possible_states) for j in range(self.width)]
+            [Tile(self.possible_states) for j in range(self.width)]
             for i in range(self.height)
         ]
 
@@ -97,7 +97,7 @@ class Field:
         # Generate a grid of the entropy for each tile
         entropies = np.array([
             [
-                entr if (entr := self.canvas[i][j].entropy) != 1 else None
+                self.canvas[i][j].entropy if not self.canvas[i][j].has_collapsed else -1
                 for j in range(self.width)
             ]
             for i in range(self.height)
@@ -105,7 +105,7 @@ class Field:
 
         # Find the highest entropy
         max_entropy = np.max(entropies)
-        entropies[entropies == None] = max_entropy
+        entropies[entropies == -1] = max_entropy + 1
 
         # Find the lowest entropy
         min_entropy = np.min(entropies)
@@ -117,7 +117,7 @@ class Field:
         n = np.random.randint(len(indices))
         i, j = indices[n]
 
-        return i, j
+        return (i, j)
 
     def get_neighbors(self, i, j):
         """Get indices of neighboring tiles at (i, j)"""
@@ -131,7 +131,7 @@ class Field:
             )
             for u in radial_range
             for v in radial_range
-            if u != 0 and v != 0
+            if u != 0 or v != 0
         ]
 
         return neighbors
@@ -150,7 +150,9 @@ class Field:
 
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
-            while len(affected) > 0:
+            max_depth = 10
+            while len(affected) > 0 and max_depth > 0:
+                max_depth -= 1
                 new_affected = []
 
                 # Go through all currently affected tiles
@@ -172,15 +174,17 @@ class Field:
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
 
-                        print('-'*64)
-                        print(self, '\n')
-
-                        if tuple(current_states) != new_states:
+                        if tuple(current_states) != tuple(new_states):
                             self.canvas[i][j].states = new_states
                             
-                            new_affected.extend(
+                            new_affected += [
                                 pos for pos in set(neighbors).difference(set(affected))
-                                if pos not in new_affected
-                            )
+                                if pos not in new_affected and pos not in affected
+                            ]
 
-                affected = new_affected[:]
+                # print(len(affected))
+                affected = []
+                if new_affected:
+                    affected = new_affected[:]
+            
+            print(self)
