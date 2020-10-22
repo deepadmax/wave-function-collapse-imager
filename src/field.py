@@ -145,13 +145,12 @@ class Field:
         while not self.has_collapsed:
             min_i, min_j = self.get_lowest_entropy()
 
-            self.canvas[min_i][min_j].collapse()
+            if not self.canvas[min_i][min_j].has_collapsed:
+                self.canvas[min_i][min_j].collapse()
 
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
-            max_depth = 100000
-            while len(affected) > 0 and max_depth > 0:
-                max_depth -= 1
+            while len(affected) > 0:
                 new_affected = []
 
                 # Go through all currently affected tiles
@@ -179,7 +178,7 @@ class Field:
                             
                             new_affected += [
                                 pos for pos in set(neighbors).difference(set(affected))
-                                if pos not in new_affected
+                                if pos not in new_affected and pos not in affected
                             ]
 
                 # print(len(affected))

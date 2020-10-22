@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Matcher:
     def __init__(self):
         self.patterns = {}
@@ -27,14 +26,16 @@ class Matcher:
         
         for state in self.patterns.keys():
             count = 0
-            for patt in self.patterns[state]:
-                for i, j in np.ndindex((n, n)):
-                    if (i, j) == center:
-                        continue
-                    if patt[i][j] not in neighbors[i][j].states:
-                        break
-                else:
-                    count += 1
+            for k in range(4):
+                for patt in self.patterns[state]:
+                    rot_patt = np.rot90(patt, k=k, axes=(0,1))
+                    for i, j in np.ndindex((n, n)):
+                        if (i, j) == center:
+                            continue
+                        if rot_patt[i][j] not in neighbors[i][j].states:
+                            break
+                    else:
+                        count += 1
 
             states += [state]*count
             
