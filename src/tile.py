@@ -12,7 +12,7 @@ class Tile:
 
     @property
     def has_collapsed(self):
-        return self.entropy == 1
+        return len(self.states) == 1
 
     @property
     def entropy(self):

@@ -46,7 +46,7 @@ class Field:
                     neighbors = tuple(
                         tuple(
                             canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            if u != 0 and v != 0 else None
+                            if u != 0 or v != 0 else None
                             for v in radial_range
                         )
                         for u in radial_range
@@ -98,7 +98,7 @@ class Field:
         # Generate a grid of the entropy for each tile
         entropies = np.array([
             [
-                entr if (entr := self.canvas[i][j].entropy) != 1 else -1
+                self.canvas[i][j].entropy if not self.canvas[i][j].has_collapsed else 1000
                 for j in range(self.width)
             ]
             for i in range(self.height)
@@ -118,7 +118,7 @@ class Field:
         n = np.random.randint(len(indices))
         i, j = indices[n]
 
-        return i, j
+        return (i, j)
 
     def get_neighbors(self, i, j):
         """Get indices of neighboring tiles at (i, j)"""
@@ -145,6 +145,7 @@ class Field:
         radial_range = range(-self.radius, self.radius+1)
 
         while not self.has_collapsed:
+            print(self, '\n')
             min_i, min_j = self.get_lowest_entropy()
 
             self.canvas[min_i][min_j].collapse()
@@ -173,14 +174,15 @@ class Field:
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
 
-                        print(self, '\n')
 
                         if tuple(current_states) != new_states:
                             self.canvas[i][j].states = new_states
                             
-                            new_affected.extend(
+                            new_affected += [
                                 pos for pos in set(neighbors).difference(set(affected))
-                                if pos not in new_affected
-                            )
+                                if pos not in new_affected and pos not in affected
+                            ]
 
-                affected = new_affected[:]
+                affected = []
+                if new_affected:
+                    affected = new_affected[:]
