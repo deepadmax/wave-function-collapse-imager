@@ -17,20 +17,14 @@ class Matcher:
         """Match a list of neighbors to find possible states"""
 
         states = []
-
-        # Number of neighbors
-        n = len(neighbors)
-        
-        # Center of kernel
-
-        center = (n // 2,)*2
         
         for state in self.patterns.keys():
             count = 0
 
             for patt in self.patterns[state]:
-                for i, j in np.ndindex((n, n)):
-                    if (i, j) != center and patt[i][j] not in set(neighbors[i][j].states):
+                # loop over every cardinal neighbor 
+                for i in range(4):
+                    if patt[i] not in neighbors[i]:
                         break
                 else:
                     count += 1

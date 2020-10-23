@@ -3,15 +3,16 @@ import time
 
 
 field = Field.create(
-    'demo-5.pat',
-    width=128,
-    height=64,
-    radius=1
+    'demo.pat',
+    width=32,
+    height=16,
+    N=2
 )
 
 field.clear()
 
 # field.seed()
+
 
 start_time = time.time()
 if field.collapse():

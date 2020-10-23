@@ -1,6 +1,5 @@
 import numpy as np
-from random import choice
-from collections import Counter
+from random import choice, uniform
 
 
 class Tile:
@@ -8,7 +7,7 @@ class Tile:
         self.states = states
 
     def __str__(self):
-        return (self.states[0] if len(self.states) == 1 else ('!' if len(self.states) == 0  else'░'))
+        return str(self.states[0] if len(self.states) == 1 else 0)
 
     @property
     def has_collapsed(self):
@@ -22,7 +21,7 @@ class Tile:
             z = p * np.log(p)
             entropy -= z
 
-        return entropy
+        return entropy + uniform(0,0.01)
 
     def collapse(self):
-        self.states = [Counter(self.states).most_common(1)[0][0]]
+        self.states = [choice(self.states)]

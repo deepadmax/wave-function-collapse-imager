@@ -7,68 +7,77 @@ from .tile import Tile
 
 
 class Field:
-    def __init__(self, possible_states, matcher, radius=1, width=1, height=1):
-        self.possible_states = possible_states
+    def __init__(self, pattern_index, matcher, N=1, width=1, height=1):
         self.matcher = matcher
 
-        self.radius = radius
+        self.N = N
         self.width = width
         self.height = height
+
+        self.pattern_index = pattern_index
+        self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
         
         # Initialize an empty canvas
         self.clear()
 
     @classmethod
-    def create(cls, fname, radius=1, width=10, height=7, rotations=False):
+    def create(cls, fname, N=1, width=10, height=7, rotations=False):
         """Create a canvas from file"""
 
         with open(fname) as f:
             # A 2D array of characters
-            canvas = [list(row) for row in f.read().split('\n')]
+            value_grid = [list(row) for row in f.read().split('\n')]
 
-            canvas_width = len(canvas[0])
-            canvas_height = len(canvas)
-
-            # Make the possible states be the set of all states on the canvas
-            possible_states = list(set(
-                canvas[i][j]
-                for i in range(canvas_height)
-                for j in range(canvas_width)
-            ))
+            canvas_width = len(value_grid[0])
+            canvas_height = len(value_grid)
             
-            # Initialize Matcher and add all patterns
-            matcher = Matcher()
-
-            # Scan through the canvas and create patterns from each section
-            radial_range = range(-radius, radius+1)
+            patterns = {}
+            in_patterns = []
 
             for i in range(canvas_height):
                 for j in range(canvas_width):
-                    # An array of neighbors except the center is None
                     neighbors = tuple(
                         tuple(
-                            canvas[(i + u) % canvas_height][(j + v) % canvas_width]
-                            for v in radial_range
+                            value_grid[(i + u) % canvas_height][(j + v) % canvas_width]
+                            for v in range(N)
                         )
-                        for u in radial_range
+                        for u in range(N)
                     )
-
-                    # Get state from center
-                    state = canvas[i][j]
 
                     if rotations:
                         # Add pattern with all four different orientations
                         for _ in range(4):
-                            neighbors = np.rot90(neighbors, k=1)
-                            neighbors = matcher.tuple_neighbors(neighbors)
-                            matcher.add_pattern(neighbors, state)
+                            neighbors = tuple(tuple(row) for row in np.rot90(neighbors, k=1))
+                            if neighbors not in patterns:
+                                patterns[neighbors] = len(in_patterns)
+                                in_patterns += [neighbors]
                     else:
-                        matcher.add_pattern(neighbors, state)
+                        if neighbors not in patterns:
+                            patterns[neighbors] = len(in_patterns)
+                            in_patterns += [neighbors]
 
-            return cls(possible_states, matcher, radius, width, height)
+            
+            pattern_grid = [[patterns[tuple(tuple(
+                            value_grid[(i + u) % canvas_height][(j + v) % canvas_width]
+                            for v in range(N))for u in range(N))] for j in range(canvas_width)] for i in range(canvas_height)]
+            
+            # Initialize Matcher and add all patterns
+            matcher = Matcher()
+
+            cardinals = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
+
+            for i in range(canvas_height):
+                for j in range(canvas_width):
+                    neighbors = [
+                        pattern_grid[u%canvas_height][v%canvas_width]
+                        for u,v in cardinals(i,j)
+                    ]
+                    matcher.add_pattern(neighbors, pattern_grid[i][j])
+
+            return cls(in_patterns, matcher, N, width, height)
 
     def __str__(self):
-        return '\n'.join([''.join([*map(str, row)]) for row in self.canvas])
+        return '\n'.join([''.join([self.pattern_index[int(str(a))][0][0] for a in row]) for row in self.canvas])
 
     @property
     def has_collapsed(self):
@@ -84,7 +93,7 @@ class Field:
         """Clear the canvas and set all tiles into superposition"""
         
         self.canvas = [
-            [Tile(self.possible_states) for j in range(self.width)]
+            [Tile(range(len(self.patterns))) for j in range(self.width)]
             for i in range(self.height)
         ]
 
@@ -124,18 +133,17 @@ class Field:
 
         return (i, j)
 
-    def get_neighbors(self, i, j):
+    def get_neighbors(self, u, v):
         """Get indices of neighboring tiles at (i, j)"""
 
-        radial_range = range(-self.radius, self.radius+1)
+        N = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
         
         neighbors = [
             (
-                (i + u) % self.height,
-                (j + v) % self.width
+                i % self.height,
+                j % self.width
             )
-            for u in radial_range
-            for v in radial_range
+            for i,j in N(u,v)
         ]
 
         return neighbors
@@ -144,8 +152,6 @@ class Field:
         """Until all tiles on the canvas have had their states collapsed,
         continue to propagate the collapse from the tile of lowest entropy
         """
-
-        radial_range = range(-self.radius, self.radius+1)
 
         while not self.has_collapsed:
             min_i, min_j = self.get_lowest_entropy()
@@ -166,11 +172,8 @@ class Field:
                     if not self.canvas[i][j].has_collapsed:
                         neighbors = self.get_neighbors(i, j)
                         neighbor_tiles = [
-                            [
-                                self.canvas[(i + u) % self.height][(j + v) % self.width]
-                                for v in radial_range
-                            ]
-                            for u in radial_range
+                            self.canvas[u][v].states
+                            for u,v in neighbors
                         ]
 
                         # Calculate the new states of (i, j) based on its neighbors
@@ -178,8 +181,8 @@ class Field:
 
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
-                        if len(new_states) == 0:
-                            continue
+                        # if len(new_states) == 0:
+                        #     continue
 
                         current_states = self.canvas[i][j].states
                         
@@ -206,7 +209,6 @@ class Field:
             print('total updated: ',total_updated)
             print(str(self).replace('!', "[red]![/red]"), '\n')
             
-            # print(str(self).replace('!', "[red]![/red]"), '\n')
         if str(self).count('!'):
             return False
         return True
