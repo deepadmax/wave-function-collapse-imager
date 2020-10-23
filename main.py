@@ -3,7 +3,7 @@ import time
 
 
 field = Field.create(
-    'demo.pat',
+    'demo-1.pat',
     width=32,
     height=16,
     radius=1
