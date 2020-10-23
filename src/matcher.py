@@ -26,81 +26,17 @@ class Matcher:
         
         for state in self.patterns.keys():
             count = 0
-            for k in range(1):
-            # for k in range(1,5):
-                for patt in self.patterns[state]:
-                    rot_patt = np.rot90(patt, k=k)
-                    for i, j in np.ndindex((n, n)):
-                        if (i, j) != center and rot_patt[i][j] not in set(neighbors[i][j].states):
-                            break
-                    else:
-                        count += 1
+
+            for pattern in self.patterns[state]:
+                for i, j in np.ndindex((n, n)):
+                    if (i, j) != center and pattern[i][j] not in set(neighbors[i][j].states):
+                        break
+                else:
+                    count += 1
 
             states += [state]*count
             
-        return tuple(states)
-    
-    def exact_match(self, neighbors):
-        """This is a modified version of Matcher.match,
-        which allows only exact matches with neighbors"""
-
-        states = []
-        # Number of neighbors
-        n = len(neighbors)
-        
-        # Neighborhood width & height
-        width = len(neighbors[0])
-        height = len(neighbors)
-
-        # Half way through the list
-        half_way = n // 2
-        # And its center coordinates
-        center = (half_way, half_way)
-
-        neighbors = self.tuple_neighbors(neighbors)
-
-        # [[1 2] [4 5 6]]
-        # ([1] + y for y in ([4] + z for z in ()))
-        def combinations(l):
-            if len(l) == 1:
-                yield from ([x] for x in l[0])
-
-            else:
-                for x in l[0]:
-                   for y in combinations(l[1:]):
-                        yield [x] + y
-
-        all_neighbor_states = [
-            neighbors[i][j].states
-            for i in range(n)
-            for j in range(n)
-        ]
-
-        for states_combination in combinations(all_neighbor_states):
-            states_combination = [
-                [
-                    states_combination[i*n+j]
-                    for j in range(n)
-                ]
-                for i in range(n)
-            ]
-
-            states_combination[half_way][half_way] = None
-            states_combination = self.tuple_neighbors(states_combination)
-
-            # print('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in states_combination), '\n')
-
-            if states := self.patterns.get(states_combination):
-                return tuple(states)
-
-        neighbor_states_s = '\n'.join(map(str, all_neighbor_states))
-
-        patterns_s = '\n\n'.join(map(
-            lambda p: ('\n'.join(' '.join(t if t is not None else ' ' for t in row) for row in p)),
-            self.patterns.keys()
-        ))
-        raise RuntimeError(f"{neighbor_states_s}\ndoesn't match with anything in\n  [\n{patterns_s}\n]")
-            
+        return tuple(states)            
 
     @staticmethod
     def tuple_neighbors(neighbors):
