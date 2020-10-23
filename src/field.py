@@ -23,7 +23,6 @@ class Field:
         """Create a canvas from file"""
 
         with open(fname) as f:
-
             # A 2D array of characters
             canvas = [list(row) for row in f.read().split('\n')]
 
@@ -57,11 +56,10 @@ class Field:
                     # Get state from center
                     state = canvas[i][j]
 
-                    # Add pattern
-                    matcher.add_pattern(neighbors, state)
-
-            for k,p in matcher.patterns.items():
-                print(p)
+                    # Add pattern with all four different orientations
+                    for _ in range(4):
+                        neighbors = np.rot90(neighbors, k=1)
+                        matcher.add_pattern(neighbors, state)
 
             return cls(possible_states, matcher, radius, width, height)
 
@@ -174,22 +172,13 @@ class Field:
                         # Calculate the new states of (i, j) based on its neighbors
                         new_states = self.matcher.match(neighbor_tiles)
 
-
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
-                        current_states = self.canvas[i][j].states
-
-
                         if len(new_states) == 0:
-                            # new_affected += [
-                            #     pos for pos in set(neighbors).difference(set(affected))
-                            #     if pos not in new_affected and pos not in affected
-                            # ]
-
-                            # new_states = self.possible_states
-
                             continue
 
+                        current_states = self.canvas[i][j].states
+                        
                         if tuple(current_states) != new_states:
                             if len(list(set(new_states))) == 1:
                                 self.canvas[i][j].states = [new_states[0]]
@@ -204,9 +193,6 @@ class Field:
                             ]
 
                             total_updated += 1
-                        if len(new_states) == 0:
-                            print('total updated: ',total_updated)
-                            print('no matches for: ',[*map(lambda a: [*map(str,a)], neighbor_tiles)])
 
 
                 affected = []
@@ -220,4 +206,3 @@ class Field:
         if str(self).count('!'):
             return False
         return True
-# %%
