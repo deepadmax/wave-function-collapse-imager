@@ -7,7 +7,7 @@ class Tile:
         self.states = states
 
     def __str__(self):
-        return str(self.states[0] if len(self.states) == 1 else 0)
+        return str(self.states[0] if len(self.states) == 1 else 'multi')
 
     @property
     def has_collapsed(self):

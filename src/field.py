@@ -15,7 +15,7 @@ class Field:
         self.height = height
 
         self.pattern_index = pattern_index
-        self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
+        # self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
         
         # Initialize an empty canvas
         self.clear()
@@ -25,20 +25,25 @@ class Field:
         """Create a canvas from file"""
 
         with open(fname) as f:
-            # A 2D array of characters
+            # A 2D array of values
             value_grid = [list(row) for row in f.read().split('\n')]
 
-            canvas_width = len(value_grid[0])
-            canvas_height = len(value_grid)
+            # width and height of the value grid
+            value_grid_width = len(value_grid[0])
+            value_grid_height = len(value_grid)
             
+            # a dictionary of patterns used for indexing
             patterns = {}
+            # a list of patterns used for indexing
             in_patterns = []
 
-            for i in range(canvas_height):
-                for j in range(canvas_width):
+            # looping over every single value
+            for i in range(value_grid_height):
+                for j in range(value_grid_width):
+                    # gather the NxN grid of values to for a pattern
                     neighbors = tuple(
                         tuple(
-                            value_grid[(i + u) % canvas_height][(j + v) % canvas_width]
+                            value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
                             for v in range(N)
                         )
                         for u in range(N)
@@ -48,36 +53,56 @@ class Field:
                         # Add pattern with all four different orientations
                         for _ in range(4):
                             neighbors = tuple(tuple(row) for row in np.rot90(neighbors, k=1))
+                            # if this pattern is not already in the index, save it
                             if neighbors not in patterns:
                                 patterns[neighbors] = len(in_patterns)
                                 in_patterns += [neighbors]
                     else:
+                        # if this pattern is not already in the index, save it
                         if neighbors not in patterns:
                             patterns[neighbors] = len(in_patterns)
                             in_patterns += [neighbors]
 
-            
+            # a grid indecies of patterns 
             pattern_grid = [[patterns[tuple(tuple(
-                            value_grid[(i + u) % canvas_height][(j + v) % canvas_width]
-                            for v in range(N))for u in range(N))] for j in range(canvas_width)] for i in range(canvas_height)]
+                            value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
+                            for v in range(N))for u in range(N))] for j in range(value_grid_width)] for i in range(value_grid_height)]
             
-            # Initialize Matcher and add all patterns
+            # Initialize Matcher
             matcher = Matcher()
 
+            # gets the relative cardinal coordinates in a 2d array
             cardinals = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
 
-            for i in range(canvas_height):
-                for j in range(canvas_width):
+            # loop over every pattern index and add all it's cardinal 
+            # neighbors to the matcher
+            for i in range(value_grid_height):
+                for j in range(value_grid_width):
+                    # get the neighbors cardinal neighbors
                     neighbors = [
-                        pattern_grid[u%canvas_height][v%canvas_width]
+                        pattern_grid[u%value_grid_height][v%value_grid_width]
                         for u,v in cardinals(i,j)
                     ]
+                    # add them to the matcher
                     matcher.add_pattern(neighbors, pattern_grid[i][j])
 
+            print(f'number of different {N}x{N} patterns: {len(patterns)}')
+
+            # return a new instance of a Filed initialized with correct parameters
             return cls(in_patterns, matcher, N, width, height)
 
     def __str__(self):
-        return '\n'.join([''.join([self.pattern_index[int(str(a))][0][0] for a in row]) for row in self.canvas])
+        output = ""
+        for row in self.canvas:
+            for elt in row:
+                tile = str(elt)
+                if tile != 'multi':
+                    output += self.pattern_index[int(tile)][0][0]
+                else:
+                    output += '░'
+            output += "\n"
+        output = output[:-1]
+        return output#'\n'.join([''.join([self.pattern_index[int(str(a))][0][0] for a in row]) for row in self.canvas])
 
     @property
     def has_collapsed(self):
@@ -93,7 +118,12 @@ class Field:
         """Clear the canvas and set all tiles into superposition"""
         
         self.canvas = [
-            [Tile(range(len(self.patterns))) for j in range(self.width)]
+            [
+                Tile(
+                    states=range(len(self.pattern_index)) # indecies of all the patterns
+                ) 
+                for j in range(self.width)
+            ]
             for i in range(self.height)
         ]
 
@@ -125,7 +155,6 @@ class Field:
 
         # All the indices which contain the minimum entropy
         indices = [(int(i), int(j)) for i, j in  zip(*np.where(entropies == min_entropy))]
-        print(len(indices))
         
         # Pick a random element
         n = np.random.randint(len(indices))
@@ -181,9 +210,6 @@ class Field:
 
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
-                        # if len(new_states) == 0:
-                        #     continue
-
                         current_states = self.canvas[i][j].states
                         
                         if tuple(current_states) != new_states:
@@ -200,6 +226,9 @@ class Field:
                             ]
 
                             total_updated += 1
+
+                        if len(new_states) == 0:
+                            print('errrr!!! line 231')
 
 
                 affected = []
