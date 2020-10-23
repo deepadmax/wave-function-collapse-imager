@@ -6,16 +6,18 @@ from .matcher import Matcher
 from .tile import Tile
 
 
+def cardinals(i, j):
+    return ((i, j-1), (i+1, j), (i, j+1), (i-1, j))
+
+
 class Field:
-    def __init__(self, pattern_index, matcher, N=1, width=1, height=1):
+    def __init__(self, patterns, matcher, N=1, width=1, height=1):
+        self.patterns = patterns
         self.matcher = matcher
 
         self.N = N
         self.width = width
         self.height = height
-
-        self.pattern_index = pattern_index
-        # self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
         
         # Initialize an empty canvas
         self.clear()
@@ -71,9 +73,6 @@ class Field:
             # Initialize Matcher
             matcher = Matcher()
 
-            # gets the relative cardinal coordinates in a 2d array
-            cardinals = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
-
             # loop over every pattern index and add all it's cardinal 
             # neighbors to the matcher
             for i in range(value_grid_height):
@@ -94,15 +93,21 @@ class Field:
     def __str__(self):
         output = ""
         for row in self.canvas:
-            for elt in row:
-                tile = str(elt)
-                if tile != 'multi':
-                    output += self.pattern_index[int(tile)][0][0]
+            for tile in row:
+                state = tile.get_state()
+                
+                # NOTE : Implement try-except to catch faulty state
+
+                if state:
+                    output += self.patterns[state][0][0]
                 else:
-                    output += '░'
+                    if state == 'multi':
+                        output += '░'
+                    elif state == 'none':
+                        output += '!'
             output += "\n"
         output = output[:-1]
-        return output#'\n'.join([''.join([self.pattern_index[int(str(a))][0][0] for a in row]) for row in self.canvas])
+        return output
 
     @property
     def has_collapsed(self):
@@ -120,7 +125,7 @@ class Field:
         self.canvas = [
             [
                 Tile(
-                    states=range(len(self.pattern_index)) # indecies of all the patterns
+                    states=range(len(self.patterns)) # indicies of all the patterns
                 ) 
                 for j in range(self.width)
             ]
@@ -162,17 +167,15 @@ class Field:
 
         return (i, j)
 
-    def get_neighbors(self, u, v):
+    def get_neighbors(self, i, j):
         """Get indices of neighboring tiles at (i, j)"""
-
-        N = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
         
         neighbors = [
             (
-                i % self.height,
-                j % self.width
+                u % self.height,
+                v % self.width
             )
-            for i,j in N(u,v)
+            for u, v in cardinals(i, j)
         ]
 
         return neighbors
@@ -230,7 +233,6 @@ class Field:
                         if len(new_states) == 0:
                             print('errrr!!! line 231')
 
-
                 affected = []
                 if len(new_affected) > 0:
                     affected = new_affected[:]
@@ -240,4 +242,33 @@ class Field:
             
         if str(self).count('!'):
             return False
+        return True
+
+    def validate(self):
+        """Check whether the generated canvas follows the rules accordingly"""
+        
+        if not self.has_collapsed:
+            self.collapse()
+
+        canvas = np.array(self.canvas)
+
+        for i in range(self.height - self.N):
+            for j in range(self.width - self.N):
+                # If no patterns can be matched at a particular section,
+                # the canvas has not generated a valid configuration
+                neighbors = tuple(
+                    tuple(
+                        self.patterns[canvas[
+                            (i + u) % self.height,
+                            (j + v) % self.width
+                        ].get_state()][0][0]
+                        
+                        for v in range(self.N)
+                    )
+                    for u in range(self.N)
+                )
+
+                if neighbors not in self.patterns:                        
+                    return False
+                    
         return True
