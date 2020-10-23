@@ -7,11 +7,11 @@ class Tile:
         self.states = states
 
     def __str__(self):
-        return self.states[0] if self.has_collapsed else 'პ'
+        return (self.states[0] if len(self.states) == 1 else ('!' if len(self.states) == 0  else'░'))
 
     @property
     def has_collapsed(self):
-        return len(self.states) == 1
+        return len(self.states) < 2
 
     @property
     def entropy(self):
