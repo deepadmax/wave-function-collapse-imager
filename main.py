@@ -6,12 +6,13 @@ field = Field.create(
     'demo.pat',
     width=32,
     height=16,
-    N=2
+    N=1,
+    rotations=1
 )
 
 field.clear()
 
-# field.seed()
+field.seed()
 
 
 start_time = time.time()

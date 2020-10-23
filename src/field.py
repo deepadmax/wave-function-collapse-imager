@@ -7,14 +7,14 @@ from .tile import Tile
 
 
 class Field:
-    def __init__(self, pattern_index, matcher, N=1, width=1, height=1):
+    def __init__(self, patterns, matcher, N=1, width=1, height=1):
         self.matcher = matcher
 
         self.N = N
         self.width = width
         self.height = height
 
-        self.pattern_index = pattern_index
+        self.patterns = patterns
         # self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
         
         # Initialize an empty canvas
@@ -96,13 +96,16 @@ class Field:
         for row in self.canvas:
             for elt in row:
                 tile = str(elt)
-                if tile != 'multi':
-                    output += self.pattern_index[int(tile)][0][0]
+                if tile not in ['multi', 'none']:
+                    output += self.patterns[int(tile)][0][0]
                 else:
-                    output += '░'
+                    if tile == 'multi':
+                        output += '░'
+                    elif tile == 'none':
+                        output += '!'
             output += "\n"
         output = output[:-1]
-        return output#'\n'.join([''.join([self.pattern_index[int(str(a))][0][0] for a in row]) for row in self.canvas])
+        return output
 
     @property
     def has_collapsed(self):
@@ -120,7 +123,7 @@ class Field:
         self.canvas = [
             [
                 Tile(
-                    states=range(len(self.pattern_index)) # indecies of all the patterns
+                    states=list(range(len(self.patterns))) # indecies of all the patterns
                 ) 
                 for j in range(self.width)
             ]
