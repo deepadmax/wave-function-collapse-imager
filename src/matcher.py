@@ -22,24 +22,23 @@ class Matcher:
         n = len(neighbors)
         
         # Center of kernel
-        center = (n // 2, n // 2)
+        center = (n // 2)*2
         
         for state in self.patterns.keys():
             count = 0
-            for k in range(4):
+            for k in range(1):
+            # for k in range(1,5):
                 for patt in self.patterns[state]:
-                    rot_patt = np.rot90(patt, k=k, axes=(0,1))
+                    rot_patt = np.rot90(patt, k=k)
                     for i, j in np.ndindex((n, n)):
-                        if (i, j) == center:
-                            continue
-                        if rot_patt[i][j] not in neighbors[i][j].states:
+                        if (i, j) != center and rot_patt[i][j] not in set(neighbors[i][j].states):
                             break
                     else:
                         count += 1
 
             states += [state]*count
             
-        return states
+        return tuple(states)
     
     def exact_match(self, neighbors):
         """This is a modified version of Matcher.match,

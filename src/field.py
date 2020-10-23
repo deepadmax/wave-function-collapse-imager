@@ -1,5 +1,7 @@
 import numpy as np
 
+from rich import print
+
 from .matcher import Matcher
 from .tile import Tile
 
@@ -112,6 +114,7 @@ class Field:
 
         # All the indices which contain the minimum entropy
         indices = [(int(i), int(j)) for i, j in  zip(*np.where(entropies == min_entropy))]
+        print(len(indices))
         
         # Pick a random element
         n = np.random.randint(len(indices))
@@ -150,11 +153,14 @@ class Field:
 
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
+
+            total_updated = 0
             while len(affected) > 0:
                 new_affected = []
 
                 # Go through all currently affected tiles
                 for i, j in affected:
+                    # print('wowieee!')
                     if not self.canvas[i][j].has_collapsed:
                         neighbors = self.get_neighbors(i, j)
                         neighbor_tiles = [
@@ -168,12 +174,28 @@ class Field:
                         # Calculate the new states of (i, j) based on its neighbors
                         new_states = self.matcher.match(neighbor_tiles)
 
+
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
                         current_states = self.canvas[i][j].states
 
-                        if tuple(current_states) != tuple(new_states):
-                            self.canvas[i][j].states = new_states
+
+                        if len(new_states) == 0:
+                            # new_affected += [
+                            #     pos for pos in set(neighbors).difference(set(affected))
+                            #     if pos not in new_affected and pos not in affected
+                            # ]
+
+                            # new_states = self.possible_states
+
+                            continue
+
+                        if tuple(current_states) != new_states:
+                            if len(list(set(new_states))) == 1:
+                                self.canvas[i][j].states = [new_states[0]]
+                            else:
+                                self.canvas[i][j].states = new_states
+                            # self.canvas[i][j].states = list(set(new_states))
                             # print(new_states)
                             
                             new_affected += [
@@ -181,9 +203,21 @@ class Field:
                                 if pos not in new_affected and pos not in affected
                             ]
 
-                # print(len(affected))
+                            total_updated += 1
+                        if len(new_states) == 0:
+                            print('total updated: ',total_updated)
+                            print('no matches for: ',[*map(lambda a: [*map(str,a)], neighbor_tiles)])
+
+
                 affected = []
-                if new_affected:
+                if len(new_affected) > 0:
                     affected = new_affected[:]
+                    
+            print('total updated: ',total_updated)
+            print(str(self).replace('!', "[red]![/red]"), '\n')
             
-            print(self, '\n')
+            # print(str(self).replace('!', "[red]![/red]"), '\n')
+        if str(self).count('!'):
+            return False
+        return True
+# %%
