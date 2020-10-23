@@ -57,7 +57,7 @@ class Field:
                     state = canvas[i][j]
 
                     # Add pattern with all four different orientations
-                    for k in range(4):
+                    for _ in range(4):
                         neighbors = np.rot90(neighbors, k=1)
                         matcher.add_pattern(neighbors, state)
 
