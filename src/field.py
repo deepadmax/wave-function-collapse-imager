@@ -19,7 +19,7 @@ class Field:
         self.clear()
 
     @classmethod
-    def create(cls, fname, radius=1, width=10, height=7):
+    def create(cls, fname, radius=1, width=10, height=7, rotations=False):
         """Create a canvas from file"""
 
         with open(fname) as f:
@@ -56,9 +56,13 @@ class Field:
                     # Get state from center
                     state = canvas[i][j]
 
-                    # Add pattern with all four different orientations
-                    for _ in range(4):
-                        neighbors = np.rot90(neighbors, k=1)
+                    if rotations:
+                        # Add pattern with all four different orientations
+                        for _ in range(4):
+                            neighbors = np.rot90(neighbors, k=1)
+                            neighbors = matcher.tuple_neighbors(neighbors)
+                            matcher.add_pattern(neighbors, state)
+                    else:
                         matcher.add_pattern(neighbors, state)
 
             return cls(possible_states, matcher, radius, width, height)

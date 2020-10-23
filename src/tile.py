@@ -1,5 +1,6 @@
 import numpy as np
 from random import choice
+from collections import Counter
 
 
 class Tile:
@@ -24,4 +25,4 @@ class Tile:
         return entropy
 
     def collapse(self):
-        self.states = [choice(self.states)]
+        self.states = [Counter(self.states).most_common(1)[0][0]]

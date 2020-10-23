@@ -8,8 +8,8 @@ class Matcher:
         """Add a state as a possible outcome of certain neighbors"""
 
         if state in self.patterns:
-            if neighbors not in self.patterns[state]:
-                self.patterns[state].append(neighbors)
+            # if neighbors not in self.patterns[state]:
+            self.patterns[state].append(neighbors)
         else:
             self.patterns[state] = [neighbors]
 
@@ -22,14 +22,15 @@ class Matcher:
         n = len(neighbors)
         
         # Center of kernel
-        center = (n // 2)*2
+
+        center = (n // 2,)*2
         
         for state in self.patterns.keys():
             count = 0
 
-            for pattern in self.patterns[state]:
+            for patt in self.patterns[state]:
                 for i, j in np.ndindex((n, n)):
-                    if (i, j) != center and pattern[i][j] not in set(neighbors[i][j].states):
+                    if (i, j) != center and patt[i][j] not in set(neighbors[i][j].states):
                         break
                 else:
                     count += 1
