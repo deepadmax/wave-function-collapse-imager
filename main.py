@@ -2,7 +2,7 @@ from src import Field
 import time
 
 
-field = Field.create(
+field = Field.create_from_file(
     'demo.pat',
     width=32,
     height=16,
