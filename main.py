@@ -6,8 +6,8 @@ field = Field.create(
     'demo.pat',
     width=32,
     height=16,
-    N=1,
-    rotations=1
+    N=2,
+    transforms=False
 )
 
 field.clear()
