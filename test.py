@@ -1,8 +1,8 @@
 from src import Field
 
 
-field = Field.create(
-    'demo.pat',
+field = Field.create_from_file(
+    'patterns/demo-0.pat',
     width=8,
     height=8,
     N=2
@@ -21,6 +21,10 @@ while True:
 
         if field.validate():
             successes += 1
+            
+            if successes % 100 == 0:
+                print(f'\n{field}\n')
+
     except RuntimeError:
         pass
 

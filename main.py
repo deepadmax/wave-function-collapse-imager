@@ -3,9 +3,9 @@ import time
 
 
 field = Field.create_from_file(
-    'demo.pat',
-    width=32,
-    height=16,
+    'patterns/demo-0.pat',
+    width=64,
+    height=32,
     N=2
 )
 
