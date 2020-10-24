@@ -2,7 +2,7 @@ from src import Field
 
 
 field = Field.create_from_file(
-    'patterns/demo-0.pat',
+    'patterns/demo-1.png',
     width=8,
     height=8,
     N=2
