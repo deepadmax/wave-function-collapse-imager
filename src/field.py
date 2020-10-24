@@ -6,105 +6,152 @@ from .matcher import Matcher
 from .tile import Tile
 
 
+def cardinals(i, j):
+    return ((i, j-1), (i+1, j), (i, j+1), (i-1, j))
+
+
 class Field:
-    def __init__(self, patterns, matcher, N=1, width=1, height=1):
+    def __init__(self, patterns, matcher, N=1, width=1, height=1, errchar='§'):
+        self.patterns = patterns
         self.matcher = matcher
 
         self.N = N
         self.width = width
         self.height = height
 
-        self.patterns = patterns
-        # self.patterns = {k:v for k,v in zip(pattern_index, range(len(pattern_index)))}
+        # The character displayed for tiles which have raised an error
+        self.errchar = errchar
         
         # Initialize an empty canvas
         self.clear()
 
     @classmethod
-    def create(cls, fname, N=1, width=10, height=7, rotations=False):
-        """Create a canvas from file"""
+    def create_from_file(cls, fname, **kwargs):
+        """Load a text file as a 2D array
+        and create a Field from the characters
+        """
 
         with open(fname) as f:
-            # A 2D array of values
+            # Turn individual characters into items in a 2D array
             value_grid = [list(row) for row in f.read().split('\n')]
 
-            # width and height of the value grid
-            value_grid_width = len(value_grid[0])
-            value_grid_height = len(value_grid)
-            
-            # a dictionary of patterns used for indexing
-            patterns = {}
-            # a list of patterns used for indexing
-            in_patterns = []
+            return cls.create(value_grid, **kwargs)
 
-            # looping over every single value
-            for i in range(value_grid_height):
-                for j in range(value_grid_width):
-                    # gather the NxN grid of values to for a pattern
-                    neighbors = tuple(
+    @classmethod
+    def create(cls, value_grid, N=1, width=10, height=7, symmetry=True):
+        """Create a Field from a value grid"""
+
+        # width and height of the value grid
+        value_grid_width = len(value_grid[0])
+        value_grid_height = len(value_grid)
+        
+        # Dictionary of patterns used for indexing
+        patterns = {}
+        # List of patterns used for indexing
+        in_patterns = []
+
+        # Looping over every single value
+        for i in range(value_grid_height):
+            for j in range(value_grid_width):
+                # Gather the NxN grid of values for a pattern
+                neighbors = tuple(
+                    tuple(
+                        value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
+                        for v in range(N)
+                    ) for u in range(N)
+                )
+
+                # Include mirror images and all four different orientations for each
+                if symmetry:
+                    # The two mirror flips
+                    for _flip in range(2):
+                        neighbors = tuple(tuple(row) for row in np.flip(neighbors))
+                        
+                        # The four different orientations
+                        for _rotate in range(4):
+                            neighbors = tuple(tuple(row) for row in np.rot90(neighbors, k=1))
+
+                            if neighbors not in in_patterns:
+                                patterns[neighbors] = len(patterns)
+                                in_patterns.append(neighbors)
+                
+                # Do not include all that fancy nonsense and store it plainly
+                else:
+                    neighbors = tuple(tuple(row) for row in neighbors)
+
+                    if neighbors not in in_patterns:
+                        patterns[neighbors] = len(patterns)
+                        in_patterns.append(neighbors)
+
+        # a grid indicies of patterns (
+        #   Is this comment correct? It looks whack and grammatically incorrect,
+        #   so I thought I'd ask you.
+        # )
+        pattern_grid = [
+            [
+                patterns[
+                    tuple(
                         tuple(
                             value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
+
                             for v in range(N)
-                        )
-                        for u in range(N)
+                        ) for u in range(N)
                     )
+                        
+                ] for j in range(value_grid_width)
+            ] for i in range(value_grid_height)
+        ]
 
-                    if rotations:
-                        # Add pattern with all four different orientations
-                        for _ in range(4):
-                            neighbors = tuple(tuple(row) for row in np.rot90(neighbors, k=1))
-                            # if this pattern is not already in the index, save it
-                            if neighbors not in patterns:
-                                patterns[neighbors] = len(in_patterns)
-                                in_patterns += [neighbors]
-                    else:
-                        # if this pattern is not already in the index, save it
-                        if neighbors not in patterns:
-                            patterns[neighbors] = len(in_patterns)
-                            in_patterns += [neighbors]
+        # Initialize Matcher
+        matcher = Matcher()
 
-            # a grid indecies of patterns 
-            pattern_grid = [[patterns[tuple(tuple(
-                            value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
-                            for v in range(N))for u in range(N))] for j in range(value_grid_width)] for i in range(value_grid_height)]
-            
-            # Initialize Matcher
-            matcher = Matcher()
+        # Generate patterns for the Matcher
+        # This means the cardinal neighbors of patterns,
+        # as opposed to neighbors of tiles
+        for i in range(value_grid_height):
+            for j in range(value_grid_width):
+                # Get the neighbors' cardinal neighbors
+                neighbors = [
+                    pattern_grid[u % value_grid_height][v % value_grid_width]
+                    for u, v in cardinals(i, j)
+                ]
+                # Add them to the Matcher
+                matcher.add_pattern(neighbors, pattern_grid[i][j])
 
-            # gets the relative cardinal coordinates in a 2d array
-            cardinals = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
+        print(f'Loaded {len(patterns)} patterns of size {N}×{N}')
 
-            # loop over every pattern index and add all it's cardinal 
-            # neighbors to the matcher
-            for i in range(value_grid_height):
-                for j in range(value_grid_width):
-                    # get the neighbors cardinal neighbors
-                    neighbors = [
-                        pattern_grid[u%value_grid_height][v%value_grid_width]
-                        for u,v in cardinals(i,j)
-                    ]
-                    # add them to the matcher
-                    matcher.add_pattern(neighbors, pattern_grid[i][j])
-
-            print(f'number of different {N}x{N} patterns: {len(patterns)}')
-
-            # return a new instance of a Filed initialized with correct parameters
-            return cls(in_patterns, matcher, N, width, height)
+        # Return a new instance of a Field
+        # initialized with the generated parameters
+        return cls(in_patterns, matcher, N, width, height)
 
     def __str__(self):
         output = ""
+
+        # Add top bit of frame
+        output += f"┏{'━' * self.width}┓\n"
+
         for row in self.canvas:
-            for elt in row:
-                tile = str(elt)
-                if tile not in ['multi', 'none']:
-                    output += self.patterns[int(tile)][0][0]
-                else:
-                    if tile == 'multi':
+            # Add left edge on current row
+            output += '┃'
+
+            for tile in row:
+                state = tile.get_state()
+                
+                try:
+                    if state:
+                        output += self.patterns[state][0][0]
+                    else:
                         output += '░'
-                    elif tile == 'none':
-                        output += '!'
-            output += "\n"
-        output = output[:-1]
+
+                except RuntimeError:
+                    output += self.errchar
+
+            # Add right edge on current row
+            output += '┃\n'
+
+        # Add bottom bit of frame
+        output += f"┗{'━' * self.width}┛"
+
         return output
 
     @property
@@ -123,7 +170,7 @@ class Field:
         self.canvas = [
             [
                 Tile(
-                    states=list(range(len(self.patterns))) # indecies of all the patterns
+                    states=range(len(self.patterns)) # indicies of all the patterns
                 ) 
                 for j in range(self.width)
             ]
@@ -165,17 +212,15 @@ class Field:
 
         return (i, j)
 
-    def get_neighbors(self, u, v):
+    def get_neighbors(self, i, j):
         """Get indices of neighboring tiles at (i, j)"""
-
-        N = lambda i,j: [(i, j-1), (i+1, j), (i, j+1), (i-1, j)]
         
         neighbors = [
             (
-                i % self.height,
-                j % self.width
+                u % self.height,
+                v % self.width
             )
-            for i,j in N(u,v)
+            for u, v in cardinals(i, j)
         ]
 
         return neighbors
@@ -194,7 +239,6 @@ class Field:
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
 
-            total_updated = 0
             while len(affected) > 0:
                 new_affected = []
 
@@ -216,31 +260,46 @@ class Field:
                         current_states = self.canvas[i][j].states
                         
                         if tuple(current_states) != new_states:
-                            if len(list(set(new_states))) == 1:
-                                self.canvas[i][j].states = [new_states[0]]
-                            else:
-                                self.canvas[i][j].states = new_states
-                            # self.canvas[i][j].states = list(set(new_states))
-                            # print(new_states)
+                            self.canvas[i][j].update_states(new_states)
                             
                             new_affected += [
                                 pos for pos in set(neighbors).difference(set(affected))
                                 if pos not in new_affected and pos not in affected
                             ]
 
-                            total_updated += 1
-
-                        if len(new_states) == 0:
-                            print('errrr!!! line 231')
-
-
-                affected = []
-                if len(new_affected) > 0:
-                    affected = new_affected[:]
-                    
-            print('total updated: ',total_updated)
-            print(str(self).replace('!', "[red]![/red]"), '\n')
-            
-        if str(self).count('!'):
+                affected = new_affected
+        
+        # Return False if there are any erroneous tiles
+        if str(self).count(self.errchar):
             return False
+
+        return True
+
+    def validate(self):
+        """Check whether the generated canvas follows the rules accordingly"""
+        
+        if not self.has_collapsed:
+            self.collapse()
+
+        canvas = np.array(self.canvas)
+
+        for i in range(self.height - self.N):
+            for j in range(self.width - self.N):
+                # If no patterns can be matched at a particular section,
+                # the canvas has not generated a valid configuration
+                neighbors = tuple(
+                    tuple(
+                        self.patterns[canvas[
+                            (i + u) % self.height,
+                            (j + v) % self.width
+                        ].get_state()][0][0]
+                        
+                        for v in range(self.N)
+                    )
+                    for u in range(self.N)
+                )
+
+                if neighbors not in self.patterns:                        
+                    return False
+                    
         return True
