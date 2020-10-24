@@ -10,9 +10,9 @@ class Tile:
         if len(self.states) == 1:
             return self.states[0]
         elif len(self.states) > 1:
-            return None
-
-        raise RuntimeError('Pattern has no possible states')
+            return 'multi'
+        elif len(self.states) == 0:
+            return 'none'
 
     def update_states(self, states):
         # If there's only one type of state,

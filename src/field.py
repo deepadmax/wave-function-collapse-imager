@@ -4,6 +4,7 @@ from rich import print
 
 from .matcher import Matcher
 from .tile import Tile
+from .image import read_image, save_image
 
 
 def cardinals(i, j):
@@ -30,7 +31,10 @@ class Field:
         """Load a text file as a 2D array
         and create a Field from the characters
         """
+        if 'png' in fname:
+            value_grid = read_image(fname)
 
+            return cls.create(value_grid, **kwargs)
         with open(fname) as f:
             # Turn individual characters into items in a 2D array
             value_grid = [list(row) for row in f.read().split('\n')]
@@ -38,7 +42,7 @@ class Field:
             return cls.create(value_grid, **kwargs)
 
     @classmethod
-    def create(cls, value_grid, N=1, width=10, height=7, symmetry=True):
+    def create(cls, value_grid, N=1, width=10, height=7, transforms=False):
         """Create a Field from a value grid"""
 
         # width and height of the value grid
@@ -56,13 +60,13 @@ class Field:
                 # Gather the NxN grid of values for a pattern
                 neighbors = tuple(
                     tuple(
-                        value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
+                        tuple(value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width])
                         for v in range(N)
                     ) for u in range(N)
                 )
 
                 # Include mirror images and all four different orientations for each
-                if symmetry:
+                if transforms:
                     # The two mirror flips
                     for _flip in range(2):
                         neighbors = tuple(tuple(row) for row in np.flip(neighbors))
@@ -77,22 +81,27 @@ class Field:
                 
                 # Do not include all that fancy nonsense and store it plainly
                 else:
-                    neighbors = tuple(tuple(row) for row in neighbors)
+                    neighbors = tuple(tuple([*map(tuple,row)]) for row in neighbors)
+
+                    print('neighbors: ',np.array(neighbors,dtype='uint8'))
+                    print(neighbors in in_patterns )
 
                     if neighbors not in in_patterns:
+                        save_image(np.array(neighbors,dtype='uint8'), f'debug/{i}x{j}.png')
                         patterns[neighbors] = len(patterns)
-                        in_patterns.append(neighbors)
+                        in_patterns.append(neighbors[0][0])
 
         # a grid indicies of patterns (
         #   Is this comment correct? It looks whack and grammatically incorrect,
         #   so I thought I'd ask you.
         # )
+        # I think it should be "a grid of pattern indices"
         pattern_grid = [
             [
                 patterns[
                     tuple(
                         tuple(
-                            value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width]
+                            tuple(value_grid[(i + u) % value_grid_height][(j + v) % value_grid_width])
 
                             for v in range(N)
                         ) for u in range(N)
@@ -124,6 +133,24 @@ class Field:
         # initialized with the generated parameters
         return cls(in_patterns, matcher, N, width, height)
 
+    def get_image(self):
+        output = [[0 for i in range(self.width)] for j in range(self.height)]
+        for i in range(self.height):
+            for j in range(self.width):
+                state = self.canvas[i][j].get_state()
+                
+                if state == 'multi':
+                    output[i][j] = (127,127,127,255)
+                elif state == 'none':
+                    output[i][j] = (255,0,0,255)
+                else:
+                    output[i][j] = self.patterns[state]
+
+        output= tuple([*map(tuple,output)])
+
+        print(np.array(output))
+        return np.array(output,dtype='uint8')
+
     def __str__(self):
         output = ""
 
@@ -138,10 +165,12 @@ class Field:
                 state = tile.get_state()
                 
                 try:
-                    if state:
-                        output += self.patterns[state][0][0]
-                    else:
+                    if state == 'multi':
                         output += '░'
+                    elif state == 'none':
+                        output += '!'
+                    else:
+                        output += self.patterns[state]
 
                 except RuntimeError:
                     output += self.errchar
@@ -170,7 +199,7 @@ class Field:
         self.canvas = [
             [
                 Tile(
-                    states=range(len(self.patterns)) # indicies of all the patterns
+                    states=range(len(self.patterns)) # indices of all the patterns
                 ) 
                 for j in range(self.width)
             ]
@@ -239,6 +268,8 @@ class Field:
             # Continue until there are no more affected tiles
             affected = self.get_neighbors(min_i, min_j)
 
+            total_updated = 0
+
             while len(affected) > 0:
                 new_affected = []
 
@@ -267,11 +298,17 @@ class Field:
                                 if pos not in new_affected and pos not in affected
                             ]
 
+                            total_updated += 1
+
                 affected = new_affected
+                
+
+            print('total updated: ',total_updated)
+            # print(str(self).replace('!', "[red]![/red]"), '\n')
         
         # Return False if there are any erroneous tiles
-        if str(self).count(self.errchar):
-            return False
+        # if str(self).count(self.errchar):
+        #     return False
 
         return True
 
@@ -292,7 +329,7 @@ class Field:
                         self.patterns[canvas[
                             (i + u) % self.height,
                             (j + v) % self.width
-                        ].get_state()][0][0]
+                        ].get_state()]
                         
                         for v in range(self.N)
                     )

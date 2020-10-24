@@ -31,7 +31,7 @@ class Matcher:
 
             states += [state]*count
             
-        return tuple(states)            
+        return tuple([*map(tuple,states)])
 
     @staticmethod
     def tuple_neighbors(neighbors):
