@@ -16,6 +16,6 @@ field.clear()
 
 start_time = time.time()
 if field.collapse():
-    print(f'finished! in {(time.time()-start_time)}s.')
+    print(f'finished! in {(time.time()-start_time)}s')
     print(field)
     print(f'Field validation: {"SUCCESSFUL" if field.validate() else "FAILURE"}')

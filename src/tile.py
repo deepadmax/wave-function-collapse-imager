@@ -14,6 +14,19 @@ class Tile:
 
         raise RuntimeError('Pattern has no possible states')
 
+    def update_states(self, states):
+        # If there's only one type of state,
+        # store it simply as a list of one
+        if len(set(states)) == 1:
+            self.states = [states[0]]
+
+        # Multiple? Store them.
+        elif len(self.states) > 1:
+            self.states = states
+
+        else:
+            raise RuntimeError('No states specified')
+
     @property
     def has_collapsed(self):
         return len(self.states) < 2
