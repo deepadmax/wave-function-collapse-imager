@@ -126,7 +126,14 @@ class Field:
 
     def __str__(self):
         output = ""
+
+        # Add top bit of frame
+        output += f"┏{'━' * self.width}┓\n"
+
         for row in self.canvas:
+            # Add left edge on current row
+            output += '┃'
+
             for tile in row:
                 state = tile.get_state()
                 
@@ -139,8 +146,12 @@ class Field:
                 except RuntimeError:
                     output += self.errchar
 
-            output += "\n"
-        output = output[:-1]
+            # Add right edge on current row
+            output += '┃\n'
+
+        # Add bottom bit of frame
+        output += f"┗{'━' * self.width}┛"
+
         return output
 
     @property
