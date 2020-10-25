@@ -5,40 +5,7 @@ from rich import print
 from .matcher import Matcher
 from .tile import Tile
 from .image import read_image, save_image
-
-
-cardinal_string: list = ['LEFT', 'DOWN', 'RIGHT', 'UP']
-relative_cardinals = lambda i, j: ((i, j-1), (i+1, j), (i, j+1), (i-1, j))
-rotate_list = lambda l, n: l[n:] + l[:n]
-transpose_2D = lambda l: [[l[j][i] for j in range(len(l))] for i in range(len(l[0]))]
-
-def pattern_compatible(a, b, direction):
-    # LEFT
-    if direction == 0:
-        A = transpose_2D(a)[:-1]#(row[:-1] for row in a)
-        B = transpose_2D(b)[1:]#(row[1:] for row in b)
-        return A == B
-
-    # DOWN
-    if direction == 1:
-        A = a[:-1]
-        B = b[1:]
-        return A == B
-
-    # RIGHT
-    if direction == 2:
-        A = transpose_2D(a)[1:]#(row[:-1] for row in a)
-        B = transpose_2D(b)[:-1]#(row[1:] for row in b)
-        return A == B
-
-    # UP
-    if direction == 3:
-        A = a[1:]
-        B = b[:-1]
-        return A == B
-    
-    raise RuntimeError("oioioi")
-
+from .helper_functions import *
 
 
 class Field:
@@ -58,7 +25,7 @@ class Field:
 
     @classmethod
     def create_from_file(cls, fname, **kwargs):
-        """Load a text file as a 2D array
+        """Load a text or image file as a 2D array
         and create a Field from the characters
         """
         if fname.endswith('.png'):
@@ -72,7 +39,7 @@ class Field:
             return cls.create(value_grid, **kwargs)
 
     @classmethod
-    def create(cls, value_grid, N=1, width=10, height=7, transforms=False):
+    def create(cls, value_grid, N=1, width=10, height=7, symmetry=False):
         """Create a Field from a value grid"""
 
         # width and height of the value grid
@@ -95,15 +62,16 @@ class Field:
                     ) for u in range(N)
                 )
 
+                # TODO: implement symmetry
                 # Include mirror images and all four different orientations for each
-                if transforms:
+                if symmetry:
                     # The two mirror flips
                     for _flip in range(2):
-                        neighbors = tuple(tuple(row) for row in np.flip(neighbors))
+                        neighbors = tuple(tuple([*map(tuple,row)]) for row in np.fliplr(neighbors))
                         
                         # The four different orientations
                         for _rotate in range(4):
-                            neighbors = tuple(tuple(row) for row in np.rot90(neighbors, k=1))
+                            neighbors = tuple(tuple([*map(tuple,row)]) for row in np.rot90(neighbors, k=1))
 
                             if neighbors not in pattern_list:
                                 patterns[neighbors] = len(patterns)
@@ -138,19 +106,27 @@ class Field:
         return cls(pattern_list, matcher, N, width, height)
 
     def get_image(self, upscale=4):
+        """returns a np.ndarray object containing RGBA values for the image"""
+
+        # Make a 2d array with canvas size upscaled
         output = [[0 for i in range(self.width*upscale)] for j in range(self.height*upscale)]
+        
+        # Loop over the canvas
         for i in range(self.height):
             for j in range(self.width):
+                val = 0
+                state = self.canvas[i][j].get_state()
+                
+                if state == 'multi':
+                    val = (127,127,127,255)
+                elif state == 'none':
+                    val = (255,0,0,255)
+                else:
+                    val = self.patterns[state][0][0]
+
                 for u in range(upscale):
                     for v in range(upscale):
-                        state = self.canvas[i][j].get_state()
-                        
-                        if state == 'multi':
-                            output[i*upscale+u][j*upscale+v] = (127,127,127,255)
-                        elif state == 'none':
-                            output[i*upscale+u][j*upscale+v] = (255,0,0,255)
-                        else:
-                            output[i*upscale+u][j*upscale+v] = self.patterns[state][0][0]
+                        output[i*upscale + u][j*upscale + v] = val
 
         output= tuple([*map(tuple,output)])
 
@@ -189,7 +165,7 @@ class Field:
         return output
 
     @property
-    def has_collapsed(self):
+    def has_collapsed(self) -> bool:
         """Check if all tiles have had their states collapsed"""
         
         for row in self.canvas:
@@ -197,6 +173,18 @@ class Field:
                 if not tile.has_collapsed:
                     return False
         return True
+
+    def count_collapsed(self) -> bool:
+        """Returns the number of collapsed tiles"""
+
+        count = 0
+
+        for row in self.canvas:
+            for tile in row:
+                if tile.has_collapsed:
+                    count += 1
+
+        return count
 
     def clear(self):
         """Clear the canvas and set all tiles into superposition"""
@@ -218,31 +206,48 @@ class Field:
         j = np.random.randint(0, self.width)
         self.canvas[i][j].collapse()
 
+    # @measure_time
     def get_lowest_entropy(self):
         """Get the index for the lowest entropy tile"""
 
         # Generate a grid of the entropy for each tile
-        entropies = np.array([
+        entropies = [
             [
-                self.canvas[i][j].entropy if not self.canvas[i][j].has_collapsed else -1
+                self.canvas[i][j].entropy if not self.canvas[i][j].has_collapsed else 10000000
                 for j in range(self.width)
             ]
             for i in range(self.height)
-        ])
+        ]
 
-        # Find the highest entropy
-        max_entropy = np.max(entropies)
-        entropies[entropies == -1] = max_entropy + 1
 
-        # Find the lowest entropy
-        min_entropy = np.min(entropies)
+        # Find the minimum entropy in every row. 
+        # basicly a collumn of minimum entropies
+        min_collumn = [
+            min(row) for row in entropies
+        ]
 
-        # All the indices which contain the minimum entropy
-        indices = [(int(i), int(j)) for i, j in  zip(*np.where(entropies == min_entropy))]
-        
-        # Pick a random element
-        n = np.random.randint(len(indices))
-        i, j = indices[n]
+        # get the index of the minimum value in 
+        # the minimum collumn.
+        i = min_collumn.index(min(min_collumn))
+        # now that we know the row in which the 
+        # minimum index is located, we can get the
+        # index of the minimum value in that row.
+        j = entropies[i].index(min(min_collumn))
+
+        # old code
+            # # Find the highest entropy
+            # max_entropy = np.max(entropies)
+            # entropies[entropies == -1] = max_entropy + 1
+
+            # # Find the lowest entropy
+            # min_entropy = np.min(entropies)
+
+            # # All the indices which contain the minimum entropy
+            # indices = [(int(i), int(j)) for i, j in  zip(*np.where(entropies == min_entropy))]
+            
+            # # Pick a random element
+            # n = np.random.randint(len(indices))
+            # i, j = indices[n]
 
         return (i, j)
 
@@ -279,6 +284,7 @@ class Field:
                 new_affected = []
 
                 # Go through all currently affected tiles
+                start_time = time.time()
                 for i, j in affected:
                     # print('wowieee!')
                     if not self.canvas[i][j].has_collapsed:
@@ -289,7 +295,7 @@ class Field:
                         ]
 
                         # Calculate the new states of (i, j) based on its neighbors
-                        new_states = self.matcher.match(neighbor_tiles)
+                        new_states = self.matcher.match(self.canvas[i][j].states, neighbor_tiles)
 
                         # If the new states are different to the current ones,
                         # update the states for (i, j) and add neighbors to affected
@@ -305,38 +311,41 @@ class Field:
                             ]
 
                             total_updated += 1
+                print(time.time()-start_time)
 
-                if not new_affected:
-                    for i, j in np.ndindex((self.height, self.width)):
-                        if not self.canvas[i][j].has_collapsed:
-                            neighbors = self.get_neighbors(i, j)
-                            neighbor_tiles = [
-                                self.canvas[u][v].states
-                                for u,v in neighbors
-                            ]
+                # if not new_affected:
+                #     for i, j in np.ndindex((self.height, self.width)):
+                #         if not self.canvas[i][j].has_collapsed:
+                #             neighbors = self.get_neighbors(i, j)
+                #             neighbor_tiles = [
+                #                 self.canvas[u][v].states
+                #                 for u,v in neighbors
+                #             ]
 
-                            # Calculate the new states of (i, j) based on its neighbors
-                            new_states = self.matcher.match(neighbor_tiles)
+                #             # Calculate the new states of (i, j) based on its neighbors
+                #             new_states = self.matcher.match(self.canvas[i][j].states, neighbor_tiles)
 
-                            # If the new states are different to the current ones,
-                            # update the states for (i, j) and add neighbors to affected
-                            current_states = self.canvas[i][j].states
+                #             # If the new states are different to the current ones,
+                #             # update the states for (i, j) and add neighbors to affected
+                #             current_states = self.canvas[i][j].states
                             
-                            if tuple(current_states) != new_states:
-                                # print(new_states)
-                                self.canvas[i][j].update_states(new_states)
-                                
-                                new_affected += [
-                                    pos for pos in set(neighbors).difference(set(affected))
-                                    if pos not in new_affected and pos not in affected
-                                ]
+                #             if tuple(current_states) != new_states:
 
-                                total_updated += 1
+                #                 print('ayyy')
+                #                 self.canvas[i][j].update_states(new_states)
+                                
+                #                 new_affected += [
+                #                     pos for pos in set(neighbors).difference(set(affected))
+                #                     if pos not in new_affected and pos not in affected
+                #                 ]
+
+                #                 total_updated += 1
 
                 affected = new_affected
             # print(str(self))
                 
 
+            print(f'{int(self.count_collapsed()/(self.width*self.height)*100)}% done')
             print('total updated: ',total_updated)
             # print(str(self).replace('!', "[red]![/red]"), '\n')
         

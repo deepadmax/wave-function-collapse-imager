@@ -1,6 +1,7 @@
-import numpy as np
+import cmath
 from random import choice, uniform
 
+from .helper_functions import *
 
 class Tile:
     def __init__(self, states):
@@ -29,16 +30,13 @@ class Tile:
 
     @property
     def has_collapsed(self):
-        return len(self.states) < 2
+        return len(self.states) == 1
 
     @property
     def entropy(self):
-        entropy = 0
-        for state in set(self.states):
-            p = self.states.count(state) / len(self.states)
-            z = p * np.log(p)
-            entropy -= z
-
+        p = 1 / len(self.states)
+        z = p * cmath.log(p).real
+        entropy = -z * len(self.states)
         return entropy + uniform(0,0.01)
 
     def collapse(self):

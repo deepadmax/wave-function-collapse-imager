@@ -3,14 +3,12 @@ import time
 from src.image import save_image
 
 field = Field.create_from_file(
-    'patterns/demo-1.png',
-    width=64,
-    height=64,
+    'patterns/demo-3.png',
+    width=16,
+    height=16,
     N=3,
-    transforms=False
+    symmetry=True
 )
-
-field.clear()
 
 # field.seed()
 
